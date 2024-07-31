@@ -9,6 +9,40 @@ const PostContainer = styled.div(() => ({
   borderRadius: '5px',
   overflow: 'hidden',
 }));
+// To Display the user's name and email in each post.
+const Header = styled.div(() => ({
+  display: 'flex',
+  alignItems: 'center',
+  padding: '10px',
+  borderBottom: '1px solid #ccc',
+}));
+// Show the first letter for both the first and last names.
+const InitialsCircle = styled.div(() => ({
+  width: '40px',
+  height: '40px',
+  borderRadius: '50%',
+  backgroundColor: 'grey',
+  color: '#fff',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '16px',
+  fontWeight: 'bold',
+  marginRight: '10px',
+}));
+
+const UserInfo = styled.div(() => ({
+  display: 'flex',
+  flexDirection: 'column',
+}));
+
+const UserName = styled.span(() => ({
+  fontWeight: 'bold',
+}));
+
+const UserEmail = styled.span(() => ({
+  color: '#888',
+}));
 
 const CarouselContainer = styled.div(() => ({
   position: 'relative',
@@ -22,7 +56,8 @@ const Carousel = styled.div(() => ({
   '&::-webkit-scrollbar': {
     display: 'none',
   },
-  position: 'relative',
+  scrollSnapType: 'x mandatory',
+  scrollBehavior: 'smooth',
 }));
 
 const CarouselItem = styled.div(() => ({
@@ -46,7 +81,8 @@ const Content = styled.div(() => ({
 
 const Button = styled.button(() => ({
   position: 'absolute',
-  bottom: 0,
+  top: '50%',
+  transform: 'translateY(-50%)',
   backgroundColor: 'rgba(255, 255, 255, 0.5)',
   border: 'none',
   color: '#000',
@@ -63,13 +99,21 @@ const NextButton = styled(Button)`
   right: 10px;
 `;
 
-const Post = ({ post }) => {
+const initials = name => {
+  return name
+    .split(' ')
+    .map(word => word[0])
+    .join('');
+};
+
+const Post = ({ post, user }) => {
   const carouselRef = useRef(null);
 
   const handleNextClick = () => {
     if (carouselRef.current) {
+      const width = carouselRef.current.querySelector('img').clientWidth + 20; // Adjust for padding
       carouselRef.current.scrollBy({
-        left: 50,
+        left: width,
         behavior: 'smooth',
       });
     }
@@ -77,8 +121,9 @@ const Post = ({ post }) => {
 
   const handlePrevClick = () => {
     if (carouselRef.current) {
+      const width = carouselRef.current.querySelector('img').clientWidth + 20; // Adjust for padding
       carouselRef.current.scrollBy({
-        left: -70,
+        left: -width,
         behavior: 'smooth',
       });
     }
@@ -86,6 +131,13 @@ const Post = ({ post }) => {
 
   return (
     <PostContainer>
+      <Header>
+        <InitialsCircle>{initials(user.name)}</InitialsCircle>
+        <UserInfo>
+          <UserName>{user.name}</UserName>
+          <UserEmail>{user.email}</UserEmail>
+        </UserInfo>
+      </Header>
       <CarouselContainer>
         <Carousel ref={carouselRef}>
           {post.images.map((image, index) => (
@@ -107,12 +159,18 @@ const Post = ({ post }) => {
 
 Post.propTypes = {
   post: PropTypes.shape({
-    content: PropTypes.any,
-    images: PropTypes.shape({
-      map: PropTypes.func,
-    }),
-    title: PropTypes.any,
-  }),
+    title: PropTypes.string.isRequired,
+    body: PropTypes.string.isRequired,
+    images: PropTypes.arrayOf(
+      PropTypes.shape({
+        url: PropTypes.string.isRequired,
+      }),
+    ).isRequired,
+  }).isRequired,
+  user: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    email: PropTypes.string.isRequired,
+  }).isRequired,
 };
 
 export default Post;

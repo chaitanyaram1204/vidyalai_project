@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import styled from '@emotion/styled';
 import Post from './Post';
 import Container from '../common/Container';
-import useWindowWidth from '../hooks/useWindowWidth';
+import { useWindowWidth } from '../../Context/WindowWidthProvider';
 
 const PostListContainer = styled.div(() => ({
   display: 'flex',
@@ -35,40 +35,67 @@ const LoadMoreButton = styled.button(() => ({
 export default function Posts() {
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-
+  const [page, setPage] = useState(0);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
   const { isSmallerDevice } = useWindowWidth();
 
-  useEffect(() => {
-    const fetchPost = async () => {
-      const { data: posts } = await axios.get('/api/v1/posts', {
-        params: { start: 0, limit: isSmallerDevice ? 5 : 10 },
+  const fetchPosts = async () => {
+    try {
+      const limit = isSmallerDevice ? 5 : 10;
+      const { data: newPosts } = await axios.get('/api/v1/posts', {
+        params: {
+          start: page * limit,
+          limit,
+        },
       });
-      setPosts(posts);
-    };
+      if (newPosts.length === 0) {
+        setHasMorePosts(false);
+        return;
+      }
+      const updatedPosts = await Promise.all(
+        newPosts.map(async post => {
+          const { data: album } = await axios.get(
+            `https://jsonplaceholder.typicode.com/albums/${post.albumId}/photos`,
+          );
+          //To display the user details
+          const { data: user } = await axios.get(
+            `https://jsonplaceholder.typicode.com/users/${post.userId}`,
+          );
+          return { ...post, album, user };
+        }),
+      );
+      setPosts(prevPosts => [...prevPosts, ...updatedPosts]);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    }
+  };
 
-    fetchPost();
-  }, [isSmallerDevice]);
+  useEffect(() => {
+    fetchPosts();
+  }, [page, isSmallerDevice]);
 
   const handleClick = () => {
     setIsLoading(true);
-
+    setPage(prevPage => prevPage + 1);
     setTimeout(() => {
       setIsLoading(false);
-    }, 3000);
+    }, 1000);
   };
 
   return (
     <Container>
       <PostListContainer>
-        {posts.map(post => (
-          <Post post={post} />
+        {posts.map((post, index) => (
+          //User is for getting the name and mail
+          <Post key={index} post={post} user={post.user} />
         ))}
       </PostListContainer>
-
       <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <LoadMoreButton onClick={handleClick} disabled={isLoading}>
-          {!isLoading ? 'Load More' : 'Loading...'}
-        </LoadMoreButton>
+        {hasMorePosts && (
+          <LoadMoreButton onClick={handleClick} disabled={isLoading}>
+            {!isLoading ? 'Load More' : 'Loading...'}
+          </LoadMoreButton>
+        )}
       </div>
     </Container>
   );
